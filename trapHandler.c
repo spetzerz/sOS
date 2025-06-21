@@ -29,7 +29,7 @@ void trapHandler(void) {
     }
 }
 
-__attribute__((naked, aligned(4))) // DO NOT, I REPEAT DO NOT LET YOUR DUMASS CHANGE THIS TO 2 LINES OR ELSE THE WHOLE OS WILL FUCK ITSELF AND DIE WHEN THERE IS AN EXCEPTION
+__attribute__((naked, aligned(4))) // DO NOT, I REPEAT DO NOT LET YOUR DUMASS CHANGE THIS TO 2 LINES OR ELSE THE WHOLE OS WILL FUCK ITSELF AND DIE WHEN THERE IS AN EXCEPTION IDK WHY BUT IT WILL SO DONT LET YOUR DUMASS DO IT
 void kernelTrapHandler(void) {
     __asm__ __volatile__(
         "csrw sscratch, sp\n"

@@ -1,14 +1,19 @@
 #include "common.h"
 #include "kernel.h"
+#include "trapHandler.h"
 
 extern char __bss[], __bss_end[], __stack_top[];
 
 void kernelMain(void) {
+    // init
     memset(__bss, 0, (size_t)__bss_end - (size_t)__bss);
+
+    csrWrite(stvec, (uint32_t) kernelTrapHandler);
 
     // testing functions n shi
     OSprintf("\n\nHello %s\n", "World!");
-    panic("balls");
+    __asm__ __volatile__("unimp"); // temp: crashes the os by forcing a trap
+    
 
     // probably temp kernel loop
     for(;;) {

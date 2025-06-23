@@ -133,7 +133,7 @@ int strcmp(const char *s1, const char *s2) {
 }
 
 uint32_t bitscan(uint32_t x) {
-    if(x == 0) return 0xFFFFFFFF;
+    if(x == 0) return 0x0;
     x = x & -x;
     uint32_t ret = 0;
     if(x & 0xFFFF0000) ret += 16;

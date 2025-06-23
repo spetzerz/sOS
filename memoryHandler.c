@@ -64,19 +64,27 @@ void deallocateMemory(paddr_t *pAddress, uint32_t pages) {
     uint32_t searchingLevel = lookingLevel;
     allocatorFreeBlocks[lookingLevel][allocatorFreeBlocksCount[lookingLevel]++] = (uint32_t)pAddress;
     uint32_t pairToMatch;
+    uint32_t buddyToMatch;
 
     bool foundPair = 1;
     uint32_t pairIndex;
+
+    // NEEDS URGENT FIXING
     while (foundPair) {
+        OSprintf("Search Level: %d\n", searchingLevel);
         if (searchingLevel == LEVELS-1) {
             break;
         }
         foundPair = 0;
         pairToMatch = allocatorFreeBlocks[searchingLevel][allocatorFreeBlocksCount[searchingLevel]-1];
+        OSprintf("Pair to Match: 0x%x \n", pairToMatch);
+        OSprintf("Buddy to Match: 0x%x \n", (pairToMatch ^ (1<<(12+searchingLevel))));
         for (pairIndex = 0; pairIndex < allocatorFreeBlocksCount[searchingLevel]; pairIndex++) {
-            if (allocatorFreeBlocks[searchingLevel][pairIndex] == (pairToMatch ^ (1<<(12+searchingLevel)))) {
+            OSprintf("Checked: 0x%x \n", allocatorFreeBlocks[searchingLevel][pairIndex]);
+        }
+        for (pairIndex = 0; pairIndex < allocatorFreeBlocksCount[searchingLevel]; pairIndex++) {
+            if (allocatorFreeBlocks[searchingLevel][pairIndex] == (pairToMatch ^ (1<<(11+searchingLevel)))) {
                 foundPair = 1;
-                allocatorFreeBlocksCount[searchingLevel] -= 2;
                 break;
             }
         }
@@ -85,8 +93,10 @@ void deallocateMemory(paddr_t *pAddress, uint32_t pages) {
             for (uint32_t i = pairIndex+1; i < allocatorFreeBlocksCount[searchingLevel]; i++) {
                 allocatorFreeBlocks[searchingLevel][i-1] = allocatorFreeBlocks[searchingLevel][i]; // shift entire array
             }
+            allocatorFreeBlocksCount[searchingLevel] -= 2;
             allocatorFreeBlocks[searchingLevel+1][allocatorFreeBlocksCount[searchingLevel+1]++] = (pairToMatch & ~(1<<(12+searchingLevel)));
         } else {
+            OSprintf("No pair found\n", searchingLevel);
             break;
         }
         searchingLevel++;

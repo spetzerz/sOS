@@ -21,7 +21,7 @@ void kernelMain(void) {
     csrWrite(stvec, (uint32_t) kernelTrapHandler); 
 
     // testing functions n shi
-    uint32_t pagesToAllocate = 1; 
+    uint32_t pagesToAllocate = 2; 
     // Stress test for the allocator
     paddr_t *pAddress1 = allocateMemory(pagesToAllocate);
     OSprintf("%d Pages Allocated Starting at: 0x%x\n", pagesToAllocate, pAddress1);
@@ -29,11 +29,11 @@ void kernelMain(void) {
     OSprintf("%d Pages Allocated Starting at: 0x%x\n", pagesToAllocate, pAddress2);
     deallocateMemory(pAddress2, pagesToAllocate);
     deallocateMemory(pAddress1, pagesToAllocate);
-    pAddress1 = allocateMemory(2);
-    OSprintf("1 Pages Allocated Starting at: 0x%x\n", pAddress1);
-    deallocateMemory(pAddress1, 2);
     pAddress1 = allocateMemory(1);
-    OSprintf("%d Pages Allocated Starting at: 0x%x\n", pagesToAllocate, pAddress1);
+    OSprintf("1 Pages Allocated Starting at: 0x%x\n", pAddress1);
+    deallocateMemory(pAddress1, 1);
+    pAddress1 = allocateMemory(2);
+    OSprintf("2 Pages Allocated Starting at: 0x%x\n", pAddress1);
 
     // probably temp kernel loop
     for(;;) {

@@ -1,3 +1,6 @@
+#pragma once
+#include "common.h"
+
 void kernelTrapHandler(void);
 
 // i stole these but they work so idc

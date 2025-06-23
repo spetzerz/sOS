@@ -131,3 +131,35 @@ int strcmp(const char *s1, const char *s2) {
 
     return *(unsigned char *)s1 - *(unsigned char *)s2;
 }
+
+uint32_t bitscan(uint32_t x) {
+    if(x == 0) return 0xFFFFFFFF;
+    x = x & -x;
+    uint32_t ret = 0;
+    if(x & 0xFFFF0000) ret += 16;
+    if(x & 0xFF00FF00) ret += 8;
+    if(x & 0xF0F0F0F0) ret += 4;
+    if(x & 0xCCCCCCCC) ret += 2;
+    if(x & 0xAAAAAAAA) ret += 1;
+    return ret;
+}
+
+uint32_t pow2RoundUp(uint32_t x) {
+    x--;
+    x |= x >> 1;
+    x |= x >> 2;
+    x |= x >> 4;
+    x |= x >> 8;
+    x |= x >> 16;
+    x++;
+    return x;
+}
+
+uint32_t pow(uint32_t x, uint32_t power) {
+    if (power == 0) return 1;
+    uint32_t result = x;
+    for (uint32_t i = 1; i < power; i++) {
+        result *= x;
+    }
+    return result;
+}

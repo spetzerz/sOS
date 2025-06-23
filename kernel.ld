@@ -7,27 +7,46 @@ ENTRY(boot)
 
 SECTIONS {
     . = 0x80200000;
-
-    .text :{
+    
+    __kernel = .;
+    .text : ALIGN(4096){
+        __text = .;
         KEEP(*(.text.boot));
         *(.text .text.*);
+        . = ALIGN(4096);
+        __text_end = .;
     }
 
-    .rodata : ALIGN(4) {
+    .rodata : ALIGN(4096) {
+        __rodata = .;
         *(.rodata .rodata.*);
+        . = ALIGN(4096);
+        __rodata_end = .;
     }
 
-    .data : ALIGN(4) {
+    .data : ALIGN(4096) {
+        __data = .;
         *(.data .data.*);
+        . = ALIGN(4096);
+        __data_end = .;
     }
 
-    .bss : ALIGN(4) {
+    .bss : ALIGN(4096) {
         __bss = .;
         *(.bss .bss.* .sbss .sbss.*);
+        . = ALIGN(4096);
         __bss_end = .;
     }
-
-    . = ALIGN(4);
+    
+    .stack : ALIGN(4096) {
+    __stack_bottom = .;
     . += 128 * 1024; /* 128KB */
     __stack_top = .;
+    }
+
+    .ram : ALIGN(4096) {
+    __free_ram = .;
+    . += 64 * 1024 * 1024; /* 128 MB */
+    __free_ram_end = .;
+    }
 }

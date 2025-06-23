@@ -12,8 +12,8 @@ extern char __free_ram[], __free_ram_end[];
 
 void kernelMain(void) {
     // init
-    memset(__bss, 0, (size_t*)__bss_end - (size_t*)__bss);
-    initAllocator((uint32_t*)__free_ram);
+    memset(__bss, 0, (size_t)__bss_end - (size_t)__bss);
+    initAllocator((uint32_t)__free_ram);
     OSprintf("%dKB of Ram Available\n", (((uint32_t)__free_ram_end-(uint32_t)__free_ram)>>20));
     OSprintf("Ram Begin: 0x%x\nRam End: 0x%x\n", (uint32_t*)__free_ram, (uint32_t*)__free_ram_end);
 
@@ -21,19 +21,12 @@ void kernelMain(void) {
     csrWrite(stvec, (uint32_t) kernelTrapHandler); 
 
     // testing functions n shi
-    uint32_t pagesToAllocate = 2; 
+    uint32_t pagesToAllocate = 1; 
     // Stress test for the allocator
-    paddr_t *pAddress1 = allocateMemory(pagesToAllocate);
+    paddr_t pAddress1 = allocMemory(pagesToAllocate);
     OSprintf("%d Pages Allocated Starting at: 0x%x\n", pagesToAllocate, pAddress1);
-    paddr_t *pAddress2 = allocateMemory(pagesToAllocate);
+    paddr_t pAddress2 = allocMemory(pagesToAllocate);
     OSprintf("%d Pages Allocated Starting at: 0x%x\n", pagesToAllocate, pAddress2);
-    deallocateMemory(pAddress2, pagesToAllocate);
-    deallocateMemory(pAddress1, pagesToAllocate);
-    pAddress1 = allocateMemory(1);
-    OSprintf("1 Pages Allocated Starting at: 0x%x\n", pAddress1);
-    deallocateMemory(pAddress1, 1);
-    pAddress1 = allocateMemory(2);
-    OSprintf("2 Pages Allocated Starting at: 0x%x\n", pAddress1);
 
     // probably temp kernel loop
     for(;;) {

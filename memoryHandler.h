@@ -3,7 +3,7 @@
 
 #define MAX_ALLOCATE_SIZE 64*1024 * 1024 / PAGE_SIZE /* 64MB  In Pages*/
 #define LEVELS 15 // log2(MAX_ALLOCATE_SIZE) + 1
-#define BITMAP_LENGTH ((1 << LEVELS) - 1)
+#define BITMAP_LENGTH ((1U << LEVELS) )
 
 #define ALLOCATOR_NODE_VALID 0x1
 #define ALLOCATOR_NODE_SPLIT 0x2
@@ -21,3 +21,4 @@
 void mapPage(uint32_t *pageTable1, uint32_t *pageTables0Start, vaddr_t vAddress, paddr_t pAddress, uint32_t flags);
 void initAllocator(paddr_t __ram_start);
 paddr_t allocMemory(uint32_t pages);
+void deallocMemory(paddr_t pAddress, uint32_t pages);

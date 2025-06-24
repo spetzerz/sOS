@@ -1,7 +1,7 @@
 #include "common.h"
 #include "memoryHandler.h"
 
-static uint8_t allocatorNodes[BITMAP_LENGTH] = {0};
+static uint8_t allocatorNodes[BITMAP_LENGTH];
 static paddr_t allocatorRamBegin;
 
 static inline uint32_t levelOffset(uint32_t x) {
@@ -9,7 +9,9 @@ static inline uint32_t levelOffset(uint32_t x) {
 }
 
 void initAllocator(paddr_t __ram_start) {
-    allocatorNodes[levelOffset(LEVELS - 1)] |= ALLOCATOR_NODE_VALID;
+    memset(&allocatorNodes, 0, BITMAP_LENGTH); // why not just in case
+    
+    allocatorNodes[0] |= ALLOCATOR_NODE_VALID;
     allocatorRamBegin = __ram_start;
 }
 
@@ -19,8 +21,9 @@ paddr_t allocMemory(uint32_t pages) {
     }
 
     paddr_t pAddress;
+    uint32_t alignedPagesCount = pow2RoundUp(pages);
 
-    uint32_t levelToLook = bitscan(pow2RoundUp(pages));
+    uint32_t levelToLook = (LEVELS-1)-bitscan(alignedPagesCount);
     uint32_t currentLevel = levelToLook;
 
     uint32_t indexFound;
@@ -30,35 +33,70 @@ paddr_t allocMemory(uint32_t pages) {
         if (currentLevel >= LEVELS) {
             panic("No More Memory Left to Allocate");
         }
-        OSprintf("Current Level: %d\n", currentLevel);
-        OSprintf("Check Amount: %d\n", (1U << ((LEVELS-1)-currentLevel)));
-        for (indexFound = 0; indexFound < (1U << ((LEVELS-1)-currentLevel)); indexFound++) {
-            
+        for (indexFound = 0; indexFound < (1U << currentLevel); indexFound++) {
             if ((allocatorNodes[levelOffset(currentLevel) + indexFound] & ALLOCATOR_NODE_VALID) && !(allocatorNodes[levelOffset(currentLevel) + indexFound] & ALLOCATOR_NODE_SPLIT) && !(allocatorNodes[levelOffset(currentLevel) + indexFound] & ALLOCATOR_NODE_ALLOCATED)) {
-                OSprintf("Checkd: 0x%x\n", allocatorNodes[levelOffset(currentLevel) + indexFound]);
-                OSprintf("At Index: %d\n", indexFound);
                 memoryFound = true;
                 break;
             }
         }
         if (!memoryFound) {
-            currentLevel++;
+            currentLevel--;
         }
     } while (!memoryFound);
     
-    while (currentLevel > levelToLook) {
+    while (currentLevel < levelToLook) {
         allocatorNodes[levelOffset(currentLevel) + indexFound] |= ALLOCATOR_NODE_SPLIT | ALLOCATOR_NODE_VALID;
-        if (currentLevel > 0) {
-            allocatorNodes[levelOffset(currentLevel-1) + 2*indexFound] |= ALLOCATOR_NODE_VALID;
-            allocatorNodes[levelOffset(currentLevel-1) + 2*indexFound+1] |= ALLOCATOR_NODE_VALID;
-            indexFound *= 2;
-            currentLevel--;
+        if (currentLevel < (LEVELS-1)) {
+            allocatorNodes[levelOffset(currentLevel+1) + 2*indexFound] |= ALLOCATOR_NODE_VALID;
+            allocatorNodes[levelOffset(currentLevel+1) + 2*indexFound+1] |= ALLOCATOR_NODE_VALID;
+            currentLevel++;
         }
+        // this is the same as indexFoudn *= 2 but eh 
+        indexFound = indexFound << 1;
+    }
+    uint32_t offset = (indexFound * (PAGE_SIZE<<((LEVELS-1)-currentLevel)));
+    
+    allocatorNodes[levelOffset(currentLevel) + indexFound] |= ALLOCATOR_NODE_ALLOCATED;
+    pAddress = allocatorRamBegin + offset;
+    OSprintf("%d Pages Requested, Allocated %d Pages Starting at: 0x%x\n", pages, pow2RoundUp(pages), pAddress);
+    return pAddress;
+}
+
+void deallocMemory(paddr_t pAddress, uint32_t pages) {
+    uint32_t alignedPagesCount = pow2RoundUp(pages);
+    if (pages > MAX_ALLOCATE_SIZE || pages == 0) {
+        panic("Amount of Pages Requested To Deallocate is Invalid");
+    }
+    uint32_t levelToLook = (LEVELS-1)-bitscan(alignedPagesCount);
+    uint32_t currentLevel = levelToLook;
+    uint32_t offsetInMemory = pAddress - allocatorRamBegin;
+    uint32_t indexInTree = offsetInMemory / (PAGE_SIZE<<((LEVELS-1)-currentLevel));
+
+    if ((allocatorNodes[levelOffset(currentLevel) + indexInTree] & ALLOCATOR_NODE_SPLIT) || !(allocatorNodes[levelOffset(currentLevel) + indexInTree] & ALLOCATOR_NODE_VALID)) {
+        panic("Deallocation Address is Invalid");
+    }
+    if (!(allocatorNodes[levelOffset(currentLevel) + (indexInTree ^ 1)] & ALLOCATOR_NODE_VALID)) {
+        panic("Allocator Broken, Buddy Somehow Isnt Valid");
     }
 
-    allocatorNodes[levelOffset(currentLevel) + indexFound] |= ALLOCATOR_NODE_ALLOCATED;
-    pAddress = allocatorRamBegin + (indexFound * (PAGE_SIZE<<currentLevel));
-    return pAddress;
+    bool pairFound = false;
+    do {
+        // FREE CURRENT NODE
+        allocatorNodes[levelOffset(currentLevel) + indexInTree] &= 0;
+        allocatorNodes[levelOffset(currentLevel) + indexInTree] |= ALLOCATOR_NODE_VALID;
+        if (!(allocatorNodes[levelOffset(currentLevel) + (indexInTree ^ 1)] & ALLOCATOR_NODE_SPLIT) && !(allocatorNodes[levelOffset(currentLevel) + (indexInTree ^ 1)] & ALLOCATOR_NODE_ALLOCATED) && currentLevel > 0) { // CHECK IF BUDDY IS AVAILABLE
+            // DE-VALID BOTH AND STEP DOWN A LEVEL
+            allocatorNodes[levelOffset(currentLevel) + (indexInTree ^ 1)] &= 0;
+            allocatorNodes[levelOffset(currentLevel) + indexInTree] &= 0;
+            // DIVIDE BY 2 TO GET THE INDEX IN THE LEVEL ABOVE
+            indexInTree = indexInTree >> 1;
+            currentLevel--;
+            pairFound = true;
+        } else {
+            pairFound = false;
+        }
+    } while (pairFound);
+    OSprintf("Deallocated %d Pages Starting at: 0x%x\n", pow2RoundUp(pages), pAddress);
 }
 
 

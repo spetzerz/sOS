@@ -23,6 +23,13 @@ void trapHandler(void) {
                 __asm__ volatile("csrs sstatus, %0" :: "r"(1 << 1));
             }// we dont need to clear it if it was before cause it gets auto cleared on trap
             return;
+        } else if (trapCause == 9) {
+            trapPC += 4;
+            csrWrite(sepc, trapPC);
+            if ((sstatus & (1 << 5))) {
+                __asm__ volatile("csrs sstatus, %0" :: "r"(1 << 1));
+            } // we dont need to clear it if it was before cause it gets auto cleared on trap
+            return;
         } else {
             panic("Haha dumass ur program broke lol, scause=%x, stval=%x, sepc=%x\n", trapCause, trapPC, trapVal);
         }

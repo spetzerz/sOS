@@ -59,9 +59,9 @@ paddr_t allocMemory(uint32_t pages) {
     
     allocatorNodes[levelOffset(currentLevel) + indexFound] |= ALLOCATOR_NODE_ALLOCATED;
     pAddress = allocatorRamBegin + offset;
-    OSprintf("%d Pages Requested, Allocated %d Pages Starting at: 0x%x\n", pages, pow2RoundUp(pages), pAddress);
     return pAddress;
 }
+
 
 void deallocMemory(paddr_t pAddress, uint32_t pages) {
     uint32_t alignedPagesCount = pow2RoundUp(pages);
@@ -97,27 +97,52 @@ void deallocMemory(paddr_t pAddress, uint32_t pages) {
             pairFound = false;
         }
     } while (pairFound);
-    OSprintf("Deallocated %d Pages Starting at: 0x%x\n", pow2RoundUp(pages), pAddress);
 }
 
 
-// TODO: CHANGE THIS
-void mapPage(uint32_t *pageTable1, uint32_t *pageTables0Start, vaddr_t vAddress, paddr_t pAddress, uint32_t flags) {
+void mapPage(uint32_t *pageTable1, vaddr_t vAddress, paddr_t pAddress, uint32_t flags) {
     if (!is_aligned(vAddress, PAGE_SIZE)) {
-        panic("Unaligned Virtual Address When Allocating Memory\nVirtual Address: 0x%x\nOS May Be Corrupted", vAddress);
+        panic("Unaligned Virtual Address When Mapping Page\nVirtual Address: 0x%x\nOS May Be Corrupted", vAddress);
     }
     if (!is_aligned(pAddress, PAGE_SIZE)) {
-        panic("Unaligned Physical Address When Allocating Memory\nPhysical Address: 0x%x\nOS May Be Corrupted", pAddress);
+        panic("Unaligned Physical Address When Mapping Page\nPhysical Address: 0x%x\nOS May Be Corrupted", pAddress);
     }
 
-    uint32_t vpn1Index = (vAddress >> 22) & 0x3ff; // Extract the 10 bit field from the virtual address
+    // EXTRACT THE PAGE TABLE INDEXES FROM THE VIRTUAL ADDRESSES
+    uint32_t vpn1Index = (vAddress >> 22) & 0x3ff;
     uint32_t vpn0Index = (vAddress >> 12) & 0x3ff;
 
-    if (!(*(pageTable1 + vpn1Index) & PTEValid)) { // Create a new PTE
-        *(pageTable1 + vpn1Index) = ((size_t)(pageTables0Start+vpn1Index) << 10) | PTEValid; // its a semi-const page table so we already know where the 0th level entry is, we're basically making a 2 level page table into a 1 level with this mapping
+    if (!(*(pageTable1 + vpn1Index) & PTE_VALID)) { // Create a new PTE
+        uint32_t pageTable0 = allocMemory(1);
+        memset((uint8_t*)pageTable0, 0, 1024); // CLEAR THE NEW PAGE TABLE (FOR SAFTEY)
+        *(pageTable1+vpn1Index) = ((pageTable0 / PAGE_SIZE) << 10) | PTE_VALID;
     }
     
-    uint32_t *pageTable0 = pageTables0Start + vpn1Index * 1024; // "Create" one of the 0th level page tables
-    *(pageTable0 + vpn0Index)  = ((pAddress >> 12) << 10) | flags | PTEValid;
+    uint32_t *table0 = (uint32_t*)((*(pageTable1 + vpn1Index) >> 10) * PAGE_SIZE);
+    *(table0 + vpn0Index)  = ((pAddress / PAGE_SIZE) << 10) | flags | PTE_VALID;
 }
 
+
+void demapPage(uint32_t *pageTable1, vaddr_t vAddress) {
+    if (!is_aligned(vAddress, PAGE_SIZE)) {
+        panic("Unaligned Virtual Address When Demapping Page\nVirtual Address: 0x%x\nOS May Be Corrupted", vAddress);
+    }
+    // EXTRACT THE PAGE TABLE INDEXES FROM THE VIRTUAL ADDRESSES
+    uint32_t vpn1Index = (vAddress >> 22) & 0x3ff;
+    uint32_t vpn0Index = (vAddress >> 12) & 0x3ff;
+
+    uint32_t *table0 = (uint32_t*)((*(pageTable1 + vpn1Index) >> 10) * PAGE_SIZE);
+    *(table0 + vpn0Index) = 0; // Clear Flags
+
+    bool devalidateTable1 = 1;
+    for (uint32_t i = 0; i < 1024; i++) {
+        if (*(table0 + i) & PTE_VALID) {
+            devalidateTable1 = 0;
+            break;
+        }
+    }
+    *(pageTable1 + vpn1Index) = 0;
+    if (devalidateTable1) {
+        deallocMemory((paddr_t)table0, 1);
+    }
+}

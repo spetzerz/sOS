@@ -9,16 +9,19 @@
 #define ALLOCATOR_NODE_SPLIT 0x2
 #define ALLOCATOR_NODE_ALLOCATED 0x4
 
-#define PTEValid 0x1
-#define PTEReadable 0x2
-#define PTEWriteable 0x4
-#define PTEExecutable 0x8
-#define PTEUserPage 0x10
-#define PTEGlobal 0x20
-#define PTEAccessed 0x40
-#define PTEDirty 0x80
+#define PTE_VALID 0x1
+#define PTE_READABLE 0x2
+#define PTE_WRITEABLE 0x4
+#define PTE_EXECUTEABLE 0x8
+#define PTE_USER 0x10
+#define PTE_GLOBAL 0x20
+#define PTE_ACCESSED 0x40
+#define PTE_DIRTY 0x80
 
-void mapPage(uint32_t *pageTable1, uint32_t *pageTables0Start, vaddr_t vAddress, paddr_t pAddress, uint32_t flags);
+#define SATP_VIRTUAL (1U<<31)
+
+void mapPage(uint32_t *pageTable1, vaddr_t vAddress, paddr_t pAddress, uint32_t flags);
+void demapPage(uint32_t *pageTable1, vaddr_t vAddress);
 void initAllocator(paddr_t __ram_start);
 paddr_t allocMemory(uint32_t pages);
 void deallocMemory(paddr_t pAddress, uint32_t pages);

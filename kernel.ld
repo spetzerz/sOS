@@ -45,6 +45,7 @@ SECTIONS {
     }
 
     .ram : ALIGN(4096) {
+    __kernel_end = .;
     __free_ram = .;
     . += 64 * 1024 * 1024; /* 128 MB */
     __free_ram_end = .;

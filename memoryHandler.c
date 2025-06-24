@@ -33,6 +33,7 @@ paddr_t allocMemory(uint32_t pages) {
         if (currentLevel >= LEVELS) {
             panic("No More Memory Left to Allocate");
         }
+        
         for (indexFound = 0; indexFound < (1U << currentLevel); indexFound++) {
             if ((allocatorNodes[levelOffset(currentLevel) + indexFound] & ALLOCATOR_NODE_VALID) && !(allocatorNodes[levelOffset(currentLevel) + indexFound] & ALLOCATOR_NODE_SPLIT) && !(allocatorNodes[levelOffset(currentLevel) + indexFound] & ALLOCATOR_NODE_ALLOCATED)) {
                 memoryFound = true;

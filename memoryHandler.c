@@ -59,6 +59,7 @@ paddr_t allocMemory(uint32_t pages) {
     
     allocatorNodes[levelOffset(currentLevel) + indexFound] |= ALLOCATOR_NODE_ALLOCATED;
     pAddress = allocatorRamBegin + offset;
+    memset((void *) pAddress, 0, pages * PAGE_SIZE);
     return pAddress;
 }
 
